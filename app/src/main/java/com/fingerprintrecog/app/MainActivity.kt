@@ -25,16 +25,23 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Help
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -54,6 +61,13 @@ import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.Camera
 import android.view.MotionEvent
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.launch
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.rememberCoroutineScope
 
 class MainActivity : ComponentActivity() {
     private var fingerprintModel: Interpreter? = null
@@ -75,6 +89,10 @@ class MainActivity : ComponentActivity() {
         var errorMessage by remember { mutableStateOf("") }
         var capturedImage by remember { mutableStateOf<Bitmap?>(null) }
         var processedImage by remember { mutableStateOf<Bitmap?>(null) }
+        var showAboutDialog by remember { mutableStateOf(false) }
+        var showHelpDialog by remember { mutableStateOf(false) }
+        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
         val fingerprints = remember { mutableStateListOf<String>() }
         val context = LocalContext.current
 
@@ -83,183 +101,253 @@ class MainActivity : ComponentActivity() {
             loadFingerprints(context, fingerprints)
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Fingerprint Recognition",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            // Mode selection buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Button(
-                    onClick = { 
-                        currentMode = Mode.Register
-                        result = ""
-                        capturedImage = null
-                        processedImage = null
-                    },
-                    enabled = !isProcessing,
-                    modifier = Modifier.weight(1f).padding(end = 8.dp)
-                ) {
-                    Text("Register")
-                }
-                Button(
-                    onClick = { 
-                        currentMode = Mode.Verify
-                        result = ""
-                        capturedImage = null
-                        processedImage = null
-                    },
-                    enabled = !isProcessing,
-                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
-                ) {
-                    Text("Verify")
-                }
-                Button(
-                    onClick = { 
-                        currentMode = Mode.Manage
-                        result = ""
-                        capturedImage = null
-                        processedImage = null
-                    },
-                    enabled = !isProcessing,
-                    modifier = Modifier.weight(1f).padding(start = 8.dp)
-                ) {
-                    Text("Manage")
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                ModalDrawerSheet {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Fingerprint Recognition",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                    Divider()
+                    NavigationDrawerItem(
+                        icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                        label = { Text("About") },
+                        selected = false,
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                showAboutDialog = true
+                            }
+                        }
+                    )
+                    NavigationDrawerItem(
+                        icon = { Icon(Icons.Default.Help, contentDescription = null) },
+                        label = { Text("Help") },
+                        selected = false,
+                        onClick = {
+                            scope.launch {
+                                drawerState.close()
+                                showHelpDialog = true
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Divider()
+                    Text(
+                        "Version 1.0.0",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
             }
-
-            // Display captured and processed images
-            if (capturedImage != null || processedImage != null) {
-                Card(
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                // Watermark fingerprint image - adjusted position
+                Image(
+                    painter = painterResource(id = R.drawable.ic_thumbprint),
+                    contentDescription = "Fingerprint Watermark",
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        .size(180.dp)
+                        .align(Alignment.Center)
+                        .offset(y = (0).dp)
+                        .alpha(0.1f)
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier.padding(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    // Top bar with title and menu
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Captured Images",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            text = "Fingerprint Recognition",
+                            style = MaterialTheme.typography.headlineMedium
                         )
                         
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Menu"
+                            )
+                        }
+                    }
+
+                    // Mode selection buttons
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Button(
+                            onClick = { 
+                                currentMode = Mode.Register
+                                result = ""
+                                capturedImage = null
+                                processedImage = null
+                            },
+                            enabled = !isProcessing,
+                            modifier = Modifier.weight(1f).padding(end = 8.dp)
                         ) {
-                            capturedImage?.let { bitmap ->
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.weight(1f)
+                            Text("Register")
+                        }
+                        Button(
+                            onClick = { 
+                                currentMode = Mode.Verify
+                                result = ""
+                                capturedImage = null
+                                processedImage = null
+                            },
+                            enabled = !isProcessing,
+                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+                        ) {
+                            Text("Verify")
+                        }
+                        Button(
+                            onClick = { 
+                                currentMode = Mode.Manage
+                                result = ""
+                                capturedImage = null
+                                processedImage = null
+                            },
+                            enabled = !isProcessing,
+                            modifier = Modifier.weight(1f).padding(start = 8.dp)
+                        ) {
+                            Text("Manage")
+                        }
+                    }
+
+                    // Display captured and processed images
+                    if (capturedImage != null || processedImage != null) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    "Captured Images",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceEvenly
                                 ) {
-                                    Text(
-                                        "Original",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
-                                    Image(
-                                        bitmap = bitmap.asImageBitmap(),
-                                        contentDescription = "Captured Image",
-                                        modifier = Modifier
-                                            .size(150.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                    )
-                                }
-                            }
-                            
-                            processedImage?.let { bitmap ->
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        "Processed",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
-                                    Image(
-                                        bitmap = bitmap.asImageBitmap(),
-                                        contentDescription = "Processed Image",
-                                        modifier = Modifier
-                                            .size(150.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                    )
+                                    capturedImage?.let { bitmap ->
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(
+                                                "Original",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.padding(bottom = 4.dp)
+                                            )
+                                            Image(
+                                                bitmap = bitmap.asImageBitmap(),
+                                                contentDescription = "Captured Image",
+                                                modifier = Modifier
+                                                    .size(150.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                            )
+                                        }
+                                    }
+                                    
+                                    processedImage?.let { bitmap ->
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(
+                                                "Processed",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                modifier = Modifier.padding(bottom = 4.dp)
+                                            )
+                                            Image(
+                                                bitmap = bitmap.asImageBitmap(),
+                                                contentDescription = "Processed Image",
+                                                modifier = Modifier
+                                                    .size(150.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            }
 
-            // Display result
-            if (result.isNotEmpty()) {
-                Card(
-                        modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            "Result",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        Text(
-                            result,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                    // Display result in card format
+                    if (result.isNotEmpty() && (currentMode == null || isProcessing)) {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text(
+                                    if (currentMode == Mode.Register) "Registration Successful" else "Result",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Text(
+                                    result,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
                     }
-                }
-            }
 
-            // Main content area
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                when (currentMode) {
+                    // Main content area
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        when (currentMode) {
                             Mode.Manage -> {
                                 if (fingerprints.isEmpty()) {
-                            Text(
-                                "No fingerprints registered",
-                                modifier = Modifier.align(Alignment.Center)
-                            )
+                                    Text(
+                                        "No fingerprints registered",
+                                        modifier = Modifier.align(Alignment.Center)
+                                    )
                                 } else {
-                            Column(
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
                                         fingerprints.forEachIndexed { index, name ->
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                            .padding(vertical = 8.dp),
+                                                    .padding(vertical = 8.dp),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                        Text(
-                                            "Fingerprint ${index + 1}",
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
+                                                Text(
+                                                    "Fingerprint ${index + 1}",
+                                                    style = MaterialTheme.typography.bodyLarge
+                                                )
                                                 Button(
                                                     onClick = {
                                                         selectedFingerprintIndex = index
@@ -276,110 +364,189 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                                 Button(
-                            onClick = { currentMode = null },
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(top = 16.dp)
+                                    onClick = { currentMode = null },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(top = 16.dp)
                                 ) {
                                     Text("Back")
                                 }
                             }
                             Mode.Register, Mode.Verify -> {
-                        if (isProcessing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.align(Alignment.Center)
-                            )
-                        } else {
-                            CameraCaptureWindow(
-                                onImageCaptured = { bitmap ->
-                                    isProcessing = true
-                                    try {
-                                        Log.d("Registration", "Starting registration process")
-                                        // Store the original image before any processing
-                                        capturedImage = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-                                        val processed = preprocessWithOpenCV(bitmap)
-                                        processedImage = processed
-                                        Log.d("Registration", "Image preprocessed: ${processed.width}x${processed.height}")
-                                        
-                                        val embedding = runModel(processed)
-                                        Log.d("Registration", "Model executed successfully")
-                                        
-                                        if (currentMode == Mode.Register) {
-                                            Log.d("Registration", "Mode: Register")
-                                                saveEmbedding(context, embedding)
-                                            result = "Fingerprint registered successfully! (ID: $registrationCount)"
-                                            loadFingerprints(context, fingerprints)
-                                            Log.d("Registration", "Registration completed successfully")
-                                        } else {
-                                            Log.d("Registration", "Mode: Verify")
-                                            verifyEmbedding(context, embedding) { newResult ->
-                                                result = newResult
-                                        }
-                                            Log.d("Registration", "Verification completed")
-                                    }
-                                    } catch (e: Exception) {
-                                        Log.e("Registration", "Processing failed", e)
-                                        errorMessage = "Processing failed: ${e.localizedMessage}"
-                                        showError = true
-                                    } finally {
-                                    isProcessing = false
-                                        currentMode = null
-                                    }
-                                },
-                                onCancel = { 
-                                    Log.d("Registration", "Registration cancelled")
-                                    currentMode = null 
-                                },
-                                enableFlash = true,
-                                enableAutoFocus = true
-                            )
-                        }
-                        }
-                            null -> {
-                                if (result.isNotEmpty()) {
-                                    Text(
-                                        text = result,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.padding(vertical = 16.dp)
+                                if (isProcessing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.align(Alignment.Center)
                                     )
+                                } else {
+                                    CameraCaptureWindow(
+                                        onImageCaptured = { bitmap ->
+                                            isProcessing = true
+                                            try {
+                                                Log.d("Registration", "Starting registration process")
+                                                capturedImage = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+                                                val processed = preprocessWithOpenCV(bitmap)
+                                                processedImage = processed
+                                                Log.d("Registration", "Image preprocessed: ${processed.width}x${processed.height}")
+                                                
+                                                val embedding = runModel(processed)
+                                                Log.d("Registration", "Model executed successfully")
+                                                
+                                                if (currentMode == Mode.Register) {
+                                                    Log.d("Registration", "Mode: Register")
+                                                    saveEmbedding(context, embedding)
+                                                    result = "Fingerprint registered successfully! (ID: $registrationCount)"
+                                                    loadFingerprints(context, fingerprints)
+                                                    Log.d("Registration", "Registration completed successfully")
+                                                } else {
+                                                    Log.d("Registration", "Mode: Verify")
+                                                    verifyEmbedding(context, embedding) { newResult ->
+                                                        result = newResult
+                                                    }
+                                                    Log.d("Registration", "Verification completed")
+                                                }
+                                            } catch (e: Exception) {
+                                                Log.e("Registration", "Processing failed", e)
+                                                errorMessage = "Processing failed: ${e.localizedMessage}"
+                                                showError = true
+                                            } finally {
+                                                isProcessing = false
+                                                currentMode = null
+                                            }
+                                        },
+                                        onCancel = { 
+                                            Log.d("Registration", "Registration cancelled")
+                                            currentMode = null 
+                                        },
+                                        enableFlash = true,
+                                        enableAutoFocus = true
+                                    )
+                                }
+                            }
+                            null -> {
+                                if (result.isEmpty()) {
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            horizontalAlignment = Alignment.Start
+                                        ) {
+                                            Text(
+                                                text = "Choose an action",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                modifier = Modifier.padding(bottom = 8.dp)
+                                            )
+                                            Text(
+                                                text = "Register, Verify, or Manage fingerprints",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
 
-            // Show error dialog if needed
-            if (showError) {
-                ErrorDialog(
-                    message = errorMessage,
-                    onDismiss = { showError = false }
-                )
+                    // Footer text
+                    Text(
+                        text = "Built with TensorFlow Lite and OpenCV",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                }
             }
         }
 
-        // Delete confirmation dialog
-                    if (showDeleteDialog && selectedFingerprintIndex != null) {
-                        AlertDialog(
-                            onDismissRequest = { showDeleteDialog = false },
-                            title = { Text("Delete Fingerprint") },
-                            text = { Text("Are you sure you want to delete this fingerprint?") },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        val index = selectedFingerprintIndex!!
-                            deleteFingerprint(context, index, fingerprints)
-                                        showDeleteDialog = false
-                                        selectedFingerprintIndex = null
-                                    }
-                                ) {
-                                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = { showDeleteDialog = false }) {
-                                    Text("Cancel")
-                                }
+        // Show error dialog if needed
+        if (showError) {
+            ErrorDialog(
+                message = errorMessage,
+                onDismiss = { showError = false }
+            )
+        }
+
+        // Show delete confirmation dialog
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("Delete Fingerprint") },
+                text = { Text("Are you sure you want to delete this fingerprint?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            selectedFingerprintIndex?.let { index ->
+                                deleteFingerprint(context, index, fingerprints)
+                                loadFingerprints(context, fingerprints)
                             }
-                        )
+                            showDeleteDialog = false
+                        }
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // About Dialog
+        if (showAboutDialog) {
+            AlertDialog(
+                onDismissRequest = { showAboutDialog = false },
+                title = { Text("About") },
+                text = {
+                    Column {
+                        Text("Fingerprint Recognition App", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("A secure and efficient fingerprint recognition system using advanced machine learning techniques.")
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showAboutDialog = false }) {
+                        Text("Close")
+                    }
+                }
+            )
+        }
+
+        // Help Dialog
+        if (showHelpDialog) {
+            AlertDialog(
+                onDismissRequest = { showHelpDialog = false },
+                title = { Text("Help") },
+                text = {
+                    Column {
+                        Text("How to Register:", style = MaterialTheme.typography.titleMedium)
+                        Text("1. Click the 'Register' button\n2. Place your finger in the guide frame\n3. Hold steady and press 'Capture'\n4. Follow the on-screen instructions")
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text("How to Verify:", style = MaterialTheme.typography.titleMedium)
+                        Text("1. Click the 'Verify' button\n2. Place your finger in the guide frame\n3. Hold steady and press 'Capture'\n4. Wait for verification result")
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text("Camera Tips:", style = MaterialTheme.typography.titleMedium)
+                        Text("• Ensure good lighting\n• Keep your finger steady\n• Center your finger in the frame\n• Avoid smudges or dirt on your finger")
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showHelpDialog = false }) {
+                        Text("Close")
+                    }
+                }
+            )
         }
     }
 
