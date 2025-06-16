@@ -141,3 +141,4 @@ Presently, the app captures and stores a single portion of the fingertip during 
 ## 📄 License  
 
 This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.  
+

@@ -1,15 +1,68 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files
+bin/
+gen/
+out/
+
+# Gradle files
+.gradle/
+build/
+
+# Local configuration file
 local.properties
+
+# Android Studio
+.idea/
+*.iml
+.navigation/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Keystore files
+*.jks
+*.keystore
+
+# External native build folder
+.externalNativeBuild
+.cxx/
+
+# Version control
+vcs.xml
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# OpenCV unused modules
+app/src/main/java/calib3d/
+app/src/main/java/ml/
+app/src/main/java/photo/
+app/src/main/java/video/
+app/src/main/java/videoio/
+app/src/main/java/objdetect/
+app/src/main/java/features2d/
+app/src/main/java/dnn/
+app/src/main/java/osgi/
+
+# Keep these files
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+!gradlew
+!gradlew.bat
