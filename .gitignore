@@ -24,6 +24,7 @@ local.properties
 
 # Android Studio
 .idea/
+.kotlin/
 *.iml
 .navigation/
 gradle-app.setting
